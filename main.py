@@ -5,7 +5,7 @@ pygame.mixer.init()
 
 SIZESCREEN = WIDTH, HEIGHT = 1000, 560
 screen = pygame.display.set_mode(SIZESCREEN)
-clock = pygame.time.Clock()
+clock = pygame.time.Clock()hj
 
 path = os.path.join(os.getcwd(), 'images')
 file_names = os.listdir(path)
