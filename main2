@@ -1,0 +1,168 @@
+# main.py
+import pygame
+import os
+from resources import IMAGES, ICE_CREAM_IMAGES, correct, wrong
+
+# Initialize pygame
+pygame.init()
+pygame.mixer.init()
+
+# Set up screen
+SIZESCREEN = WIDTH, HEIGHT = 1000, 560
+screen = pygame.display.set_mode(SIZESCREEN)
+clock = pygame.time.Clock()
+
+# Load background images
+BACKGROUND = IMAGES['BACKGROUND'].convert()
+BACKGROUND2 = IMAGES['BACKGROUND2'].convert()
+
+# Colors
+DARKPINK = pygame.Color(209, 146, 197, 255)
+LIGHTPINK = pygame.Color(230, 193, 222, 255)
+BLACK = pygame.color.THECOLORS['black']
+
+# Import custom classes
+from waiter import Waiter
+from table import Table
+from container import Container
+from button import Button
+from item import Item
+
+# Create instances
+player = Waiter({'WAITERR': IMAGES['WAITERR'],
+                 'WAITERS1R': IMAGES['WAITERS1R'],
+                 'WAITERS2R': IMAGES['WAITERS2R'],
+                 'WAITERL': IMAGES['WAITERL'],
+                 'WAITERS1L': IMAGES['WAITERS1L'],
+                 'WAITERS2L': IMAGES['WAITERS2L']}, 500, 500)
+tables = [
+    Table(IMAGES['TABLE'], 110, 120, 3000, player),
+    Table(IMAGES['TABLE'], 500, 230, 5000, player),
+    Table(IMAGES['TABLE'], 875, 150, 10000, player),
+    Table(IMAGES['TABLE'], 870, 490, 15000, player)
+]
+
+containers = [
+    Container(IMAGES['CONTAINER_LEMON'], 40, 510, "LEMON"),
+    Container(IMAGES['CONTAINER_CHOCO'], 110, 510, "CHOCO"),
+    Container(IMAGES['CONTAINER_STRAWBERRY'], 180, 510, "STRAWBERRY"),
+    Container(IMAGES['CONTAINER_VANILLA'], 250, 510, "VANILLA"),
+    Container(IMAGES['SPRINKLES'], 50, 250, "VANILLA_SPRINKLES"),
+    Container(IMAGES['ICING'], 50, 385, "VANILLA_ICING"),
+]
+
+chairs = [
+    Item(IMAGES['CHAIR_L'], 40, 110),
+    Item(IMAGES['CHAIR_R'], 190, 110),
+    Item(IMAGES['CHAIR_L'], 430, 220),
+    Item(IMAGES['CHAIR_R'], 580, 220),
+    Item(IMAGES['CHAIR_L'], 805, 140),
+    Item(IMAGES['CHAIR_R'], 955, 140),
+    Item(IMAGES['CHAIR_L'], 800, 480),
+    Item(IMAGES['CHAIR_R'], 950, 480)
+]
+
+tables_group = pygame.sprite.Group(tables)
+containers_group = pygame.sprite.Group(containers)
+
+choice = Item(IMAGES['CHOICE'], 180, 370)
+start_button = Button("START", BLACK, LIGHTPINK, 150, 50, WIDTH//3-40, 500, 32)
+quit_button = Button("QUIT", BLACK, LIGHTPINK, 150, 50, (WIDTH//3)+160, 500, 32)
+controls_button = Button("CONTROLS", BLACK, LIGHTPINK, 150, 50, (WIDTH//3)+360, 500, 32)
+game_over = Button("GAME OVER", BLACK, LIGHTPINK, 300, 100, WIDTH//2, HEIGHT//2, 40)
+
+game_state = 'menu'
+window_open = True
+active_game = False
+try:
+    pygame.mixer.music.set_volume(0.1)
+    pygame.mixer.music.play(-1)
+except pygame.error as e:
+    print(f"Error playing background music: {e}")
+
+while window_open:
+    screen.blit(BACKGROUND, (0, 0))
+    current_time = pygame.time.get_ticks()
+
+    for event in pygame.event.get():
+        if event.type == pygame.QUIT:
+            window_open = False
+        elif event.type == pygame.KEYDOWN:
+            if event.key == pygame.K_ESCAPE:
+                window_open = False
+                active_game = False
+            elif event.key == pygame.K_q:
+                player.drop_ice_cream()
+            elif event.key == pygame.K_SPACE:
+                player.deliver_order(tables)
+        elif event.type == pygame.MOUSEBUTTONDOWN:
+            mouse_pos = pygame.mouse.get_pos()
+            if game_state == 'menu':
+                if start_button.rect.collidepoint(mouse_pos):
+                    game_state = 'game'
+                elif quit_button.rect.collidepoint(mouse_pos):
+                    window_open = False
+                elif controls_button.rect.collidepoint(mouse_pos):
+                    game_state = 'controls'
+                    controls_start_time = pygame.time.get_ticks()
+
+    mouse_pos = pygame.mouse.get_pos()
+    if game_state == 'menu':
+        if start_button.rect.collidepoint(mouse_pos):
+            start_button.background_color = LIGHTPINK
+            start_button.text_color = BLACK
+        else:
+            start_button.background_color = DARKPINK
+            start_button.text_color = BLACK
+        if quit_button.rect.collidepoint(mouse_pos):
+            quit_button.background_color = LIGHTPINK
+            quit_button.text_color = BLACK
+        else:
+            quit_button.background_color = DARKPINK
+            quit_button.text_color = BLACK
+        if controls_button.rect.collidepoint(mouse_pos):
+            controls_button.background_color = LIGHTPINK
+            controls_button.text_color = BLACK
+        else:
+            controls_button.background_color = DARKPINK
+            controls_button.text_color = BLACK
+        screen.blit(BACKGROUND2, (0, 0))
+        start_button.draw(screen)
+        quit_button.draw(screen)
+        controls_button.draw(screen)
+
+    elif game_state == 'game':
+        active_game = True
+        for container in containers:
+            if container.rect.collidepoint(mouse_pos):
+                container.enlarge()
+            else:
+                container.shrink()
+        if event.type == pygame.MOUSEBUTTONDOWN:
+            for container in containers:
+                if container.rect.collidepoint(mouse_pos):
+                    player.collect_ice_cream(container)
+
+        player.update()
+        player.draw(screen)
+
+        tables_group.update(current_time)
+        tables_group.draw(screen)
+
+        containers_group.update()
+        containers_group.draw(screen)
+
+        for chair in chairs:
+            chair.update()
+            chair.draw(screen)
+
+    elif game_state == 'controls':
+        if (pygame.time.get_ticks() - controls_start_time) >= 5000:
+            game_state = 'menu'
+        else:
+            screen.blit(IMAGES['CONTROLS'], (0, 0))
+
+    pygame.display.update()
+    clock.tick(60)
+
+pygame.quit()
